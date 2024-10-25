@@ -7,6 +7,7 @@ import pyautogui
 import os
 from pdf2image import convert_from_path
 from fpdf import FPDF
+import sys
 
 download_folder = os.path.join(os.getcwd(), "pdfs_baixados")
 output_folder = os.path.join(os.getcwd(), "pdfs_finalizados")
@@ -45,9 +46,6 @@ def criar_pdf_final(file_name, pdf_files):
 
             os.remove(temp_image_path)
 
-    # pdf_final.add_page()
-    # pdf_final.image(screenshot_file, x=10, y=10, w=180)
-
     pdf_output_path = os.path.join(output_folder, f"{file_name}.pdf")
     pdf_final.output(pdf_output_path)
 
@@ -76,15 +74,26 @@ screenshot = []
 
 login(username, password, "https://bccorreio.bcb.gov.br/bccorreio/Correio/CaixaDeEntrada.aspx")
 
+
 while True: 
     time.sleep(3)
-    rows = wait.until(EC.presence_of_all_elements_located((By.XPATH, "//table[@id='ctl00_ctl00_ctl00_MainContent_ConteudoPlaceHolder_GridView1']/tbody/tr")))
-    
+    rows = wait.until(EC.presence_of_all_elements_located((By.XPATH, "//table[@id='ctl00_ctl00_ctl00_MainContent_ConteudoPlaceHolder_GridView1']/tbody/tr")))    
+
+    try:
+        button_ultima = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR,"[title='Ir para a próxima página.']"))
+        )
+
+        if button_ultima.get_attribute("disabled"):
+            print("finalizado")
+            sys.exit()
+
+    except Exception as e:
+        print("Erro ao clicar no botão:", e)
     
     for index, row in enumerate(rows[1:]):  # Pulando a primeira linha de cabeçalho
         rows = wait.until(EC.presence_of_all_elements_located((By.XPATH, "//table[@id='ctl00_ctl00_ctl00_MainContent_ConteudoPlaceHolder_GridView1']/tbody/tr")))
-        row = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, f"//table[@id='ctl00_ctl00_ctl00_MainContent_ConteudoPlaceHolder_GridView1']/tbody/tr[{index + 2}]")))
-
+        row = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, f"//table[@id='ctl00_ctl00_ctl00_MainContent_ConteudoPlaceHolder_GridView1']/tbody/tr[{index + 1}]")))
+        
         file_name = f"{row.text.split(' ')[0]}"
         if "Lido/Recebido" in row.text:
             row.click()
@@ -104,11 +113,6 @@ while True:
                 dowloaded_pdf = max([os.path.join(download_folder, f) for f in os.listdir(download_folder)], key=os.path.getctime)
                 pdf_files.append(dowloaded_pdf)
 
-            driver.execute_script("window.scrollBy(0, 250);")
-            time.sleep(2)
-
-            # screenshot_file = capture_screenshot(index)
-
             time.sleep(1)
             criar_pdf_final(file_name, pdf_files)
 
@@ -125,8 +129,10 @@ while True:
                 button = WebDriverWait(driver, 10).until(
                     EC.element_to_be_clickable((By.ID, "ctl00_ctl00_ctl00_MainContent_ConteudoPlaceHolder_GridView1_ctl13_UCPaginacao_ProximaLinkButton"))
                 )
-               
+
+                # print(button.get_attribute("outerHTML"))
                 button.click()
+
                 time.sleep(2)
             except Exception as e:
                 print("Erro ao clicar no botão:", e)

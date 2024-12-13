@@ -12,34 +12,63 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import shutil
 import schedule
+import requests
 
-# Configurações do Gemini
-dados_cotistas = [
-    {
-        "nome": "GUILHERME AUGUSTO SCHMIDT",
-        "cpf": ""
-    },
-    {
-        "nome": "MANUELINA CÂNDIDA DE JESUS",
-        "cpf": "24.348.947-12"
-    },
-    {
-        "nome": "ADILSON FÉLIX DA SILVA",
-        "cpf": "001.395.427-01"
-    },
-    {
-        "nome": "Doloris Rossi",
-        "cpf": ""
-    },
-    {
-        "nome": "ODENIS DA SILVA COSTA ",
-        "cpf": "69.439.402-87"
-    },
-    {
-        "nome": "LUIZ CEZAR DA SILVA NEVES",
-        "cpf": "494.509.569-87"
-    }
-]
+# cotistas
+
+url_login = "https://portal.qoredtvm.com.br/api/v1/authorize"
+
+data_login = {
+    "username": "integracao-api@banni.com.br",
+    "password": "w2PM6oF7wR2QnATVjg2T"
+}
+
+headers = {
+    "Content-Type": "application/json"
+}
+
+response = requests.post(url_login, json=data_login, headers=headers)
+
+
+token = response.json().get("access_token")
+
+url = "https://portal.qoredtvm.com.br/api/v1/cotistas"
+
+headers_cotista = {
+    "Authorization": f"Bearer {token}",
+    "Content-Type": "application/json"
+}
+
+
+dados_cotistas = requests.get(url, headers=headers_cotista)
+print(dados_cotistas)
+
+# dados_cotistas = [
+#     {
+#         "nome": "GUILHERME AUGUSTO SCHMIDT",
+#         "cpf": ""
+#     },
+#     {
+#         "nome": "MANUELINA CÂNDIDA DE JESUS",
+#         "cpf": "24.348.947-12"
+#     },
+#     {
+#         "nome": "ADILSON FÉLIX DA SILVA",
+#         "cpf": "001.395.427-01"
+#     },
+#     {
+#         "nome": "Doloris Rossi",
+#         "cpf": ""
+#     },
+#     {
+#         "nome": "ODENIS DA SILVA COSTA ",
+#         "cpf": "69.439.402-87"
+#     },
+#     {
+#         "nome": "LUIZ CEZAR DA SILVA NEVES",
+#         "cpf": "494.509.569-87"
+#     }
+# ]
 
 def move_pdf(pdf_path, destination_folder):
     try:
@@ -67,16 +96,17 @@ def analyze_text_with_gemini(ocr_text, pdf_filename, pdf_path):
     cpfs = re.findall(regex_cpf, ocr_text)
     cnpj = re.findall(regex_cnpj, ocr_text)
 
-    for cotista in dados_cotistas:
-        if cotista['cpf'] in cpfs:
-            print(cotista['nome'])
-            move_pdf(pdf_path, "pdfs_clientes")
-            return True
-        if cotista['nome'] in ocr_text:
-            print(cotista['nome'])
-            print(pdf_path)            
-            move_pdf(pdf_path, "pdfs_clientes")
-            return True
+    for cotista in dados_cotistas.json():
+        print("COTISTASS", cotista)
+        # if cotista['cpfCnpj'] in cnpj:
+        #     print(cotista['nome'])
+        #     move_pdf(pdf_path, "pdfs_clientes")
+        #     return True
+        # if cotista['nome'] in ocr_text:
+        #     print(cotista['nome'])
+        #     print(pdf_path)            
+        #     move_pdf(pdf_path, "pdfs_clientes")
+        #     return True
     return False
 
 def pdf_to_text(pdf_path):
@@ -123,9 +153,6 @@ def monitor_folder(folder_path):
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
-
-schedule.every().day.at("16:23").do(monitor_folder)
-schedule.every().day.at("17:00").do(monitor_folder)
 
 if __name__ == "__main__":
     caminho_pdf = "pdfs_finalizados/"
